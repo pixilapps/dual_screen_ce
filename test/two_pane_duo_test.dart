@@ -27,21 +27,29 @@ Future<void> _pump(WidgetTester tester, Size size, List<DisplayFeature> features
 }
 
 void main() {
-  testWidgets('half-open landscape Duo: panes sit either side of the 40pt fold', (WidgetTester tester) async {
+  testWidgets('half-open landscape Duo: panes meet at the centre of the 40pt fold', (WidgetTester tester) async {
     await _pump(tester, _inner, const <DisplayFeature>[
       DisplayFeature(bounds: Rect.fromLTWH(455.5, 0, 40, 669), type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened),
     ]);
     // TwoPane's flex math uses a 1e12 fraction base, so compare approximately.
-    expect(tester.getRect(find.byKey(const Key('start'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 0, 455.5, 669)));
-    expect(tester.getRect(find.byKey(const Key('end'))), rectMoreOrLessEquals(const Rect.fromLTWH(495.5, 0, 455.5, 669)));
+    expect(tester.getRect(find.byKey(const Key('start'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 0, 475.5, 669)));
+    expect(tester.getRect(find.byKey(const Key('end'))), rectMoreOrLessEquals(const Rect.fromLTWH(475.5, 0, 475.5, 669)));
   });
 
-  testWidgets('half-open portrait Duo: panes stack above and below the fold', (WidgetTester tester) async {
+  testWidgets('half-open portrait Duo: panes stack and meet at the centre of the fold', (WidgetTester tester) async {
     await _pump(tester, const Size(669, 951), const <DisplayFeature>[
       DisplayFeature(bounds: Rect.fromLTWH(0, 455.5, 669, 40), type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened),
     ]);
-    expect(tester.getRect(find.byKey(const Key('start'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 0, 669, 455.5)));
-    expect(tester.getRect(find.byKey(const Key('end'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 495.5, 669, 455.5)));
+    expect(tester.getRect(find.byKey(const Key('start'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 0, 669, 475.5)));
+    expect(tester.getRect(find.byKey(const Key('end'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 475.5, 669, 475.5)));
+  });
+
+  testWidgets('a hinge keeps its gap: panes sit either side of it (Surface Duo)', (WidgetTester tester) async {
+    await _pump(tester, _inner, const <DisplayFeature>[
+      DisplayFeature(bounds: Rect.fromLTWH(455.5, 0, 40, 669), type: DisplayFeatureType.hinge, state: DisplayFeatureState.postureFlat),
+    ]);
+    expect(tester.getRect(find.byKey(const Key('start'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 0, 455.5, 669)));
+    expect(tester.getRect(find.byKey(const Key('end'))), rectMoreOrLessEquals(const Rect.fromLTWH(495.5, 0, 455.5, 669)));
   });
 
   testWidgets('flat Duo (nothing published): panePriority is respected', (WidgetTester tester) async {

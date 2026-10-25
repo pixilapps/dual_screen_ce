@@ -24,7 +24,9 @@ import 'package:flutter/widgets.dart';
 /// avoid the separating [DisplayFeature]:
 ///
 ///   * On screens with a separating [DisplayFeature], the two panes are
-///     positioned on each side of the feature. If the [DisplayFeature] splits
+///     positioned on each side of the feature. A [DisplayFeatureType.fold]
+///     has no physical gap, so the panes meet at its centre line; a hinge
+///     keeps its width as a gap. If the [DisplayFeature] splits
 ///     the screen left and right, [direction] is [Axis.horizontal]. Otherwise,
 ///     [direction] is [Axis.vertical]. The [paneProportion] and [panePriority]
 ///     parameters are also ignored and each pane occupies a sub-screen.
@@ -308,6 +310,16 @@ class TwoPane extends StatelessWidget {
         resolvedPanePriority = panePriority;
       } else {
         displayFeatureBounds = displayFeature.bounds.intersect(position).shift(-position.topLeft);
+        // A fold has no physical gap (unlike a hinge), so the panes meet at its centre line, as on
+        // Android folds. The iPhone Duo reports its fold as a 40pt strip.
+        if (displayFeature.type == .fold) {
+          final bool horizontal = resolvedDirection == Axis.horizontal;
+          displayFeatureBounds = Rect.fromCenter(
+            center: displayFeatureBounds.center,
+            width: horizontal ? 0 : displayFeatureBounds.width,
+            height: horizontal ? displayFeatureBounds.height : 0,
+          );
+        }
         if (allowedOverrides.contains(TwoPaneAllowedOverrides.panePriority)) {
           resolvedPanePriority = .both;
         } else {
