@@ -5,6 +5,7 @@
 package com.pixilapps.dual_screen_ce
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorManager
@@ -22,6 +23,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadow.api.Shadow
 import java.nio.ByteBuffer
@@ -52,6 +54,7 @@ class DualScreenInfoTest {
         sensorManager = Shadow.extract<ShadowSensorManagerWithAll>(realSensorManager)
 
         dualScreenInfo = DualScreenInfo()
+        shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE, true)
     }
 
     @Test
@@ -125,7 +128,7 @@ class DualScreenInfoTest {
     }
 
     @Test
-    @Config(sdk = [21])
+    @Config(sdk = [28])
     fun hasHingeAngleSensor_sensorTypeString() {
         // Given
         val sensor = mock<Sensor> {
@@ -150,7 +153,7 @@ class DualScreenInfoTest {
     }
 
     @Test
-    @Config(sdk = [21])
+    @Config(sdk = [28])
     fun hasHingeAngleSensor_noHingeSensor() {
         // Given
         val sensor = mock<Sensor> {
@@ -195,38 +198,14 @@ class DualScreenInfoTest {
 
         // Then
         val argumentCaptor = argumentCaptor<ByteBuffer>()
-        verify(binaryMessenger, times(4)).send(eq(HINGE_ANGLE_CHANNEL_NAME), argumentCaptor.capture())
+        verify(binaryMessenger, times(3)).send(eq(HINGE_ANGLE_CHANNEL_NAME), argumentCaptor.capture())
         val streamedValues = argumentCaptor.allValues.map {
             it.flip()
             StandardMethodCodec.INSTANCE.decodeEnvelope(it)
         }
-        assertEquals(streamedValues[1] as Double, 1.4, 0.000001)
-        assertEquals(streamedValues[2] as Double, 2.4, 0.000001)
-        assertEquals(streamedValues[3] as Double, 3.4, 0.000001)
-    }
-
-    @Test
-    fun hingeAngleStream_startsWith180() {
-        // Given
-        val sensor = mock<Sensor> {
-            on { name } doReturn "Hinge Angle"
-        }
-        sensorManager.addSensor(sensor)
-        dualScreenInfo.onAttachedToEngine(pluginBinding)
-        val reply = mock<BinaryMessenger.BinaryReply>()
-
-        // When
-        val angle = catchAngleHandler()
-        angle.onMessage(encode("listen", null), reply)
-
-        // Then
-        val argumentCaptor = argumentCaptor<ByteBuffer>()
-        verify(binaryMessenger, times(1)).send(eq(HINGE_ANGLE_CHANNEL_NAME), argumentCaptor.capture())
-        val methodCalls = argumentCaptor.allValues.map {
-            it.flip()
-            StandardMethodCodec.INSTANCE.decodeEnvelope(it)
-        }
-        assertEquals(methodCalls[0] as Double, 180.0, 0.000001)
+        assertEquals(streamedValues[0] as Double, 1.4, 0.000001)
+        assertEquals(streamedValues[1] as Double, 2.4, 0.000001)
+        assertEquals(streamedValues[2] as Double, 3.4, 0.000001)
     }
 
     @Test
@@ -249,6 +228,31 @@ class DualScreenInfoTest {
             }
         }
         assertNull(streamedValues[0])
+    }
+
+    @Test
+    @Config(sdk = [34])
+    fun hasHingeAngleSensor_sensorWithoutFeature_isFalse() {
+        // Given: One UI non-foldable — sensor present, feature not declared
+        shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE, false)
+        val sensor = mock<Sensor> {
+            on { type } doReturn Sensor.TYPE_HINGE_ANGLE
+        }
+        sensorManager.addSensor(sensor)
+        dualScreenInfo.onAttachedToEngine(pluginBinding)
+        val reply = mock<BinaryMessenger.BinaryReply>()
+
+        // When
+        catchInfoHandler().onMessage(encode("hasHingeAngleSensor", null), reply)
+
+        // Then
+        val captor = argumentCaptor<ByteBuffer>()
+        verify(reply, times(1)).reply(captor.capture())
+        val response = captor.allValues.map {
+            it.flip()
+            StandardMethodCodec.INSTANCE.decodeEnvelope(it)
+        }
+        assertEquals(false, response[0])
     }
 
     private fun produceSensorEvent(s: Sensor, v: Float) {

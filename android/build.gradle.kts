@@ -52,7 +52,8 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             all {
-                it.useJUnitPlatform()
+                // Robolectric's Android 16 (SDK 36) sandbox needs this on JDK 17+.
+                it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
 
                 it.outputs.upToDateWhen { false }
 
@@ -72,6 +73,9 @@ kotlin {
 }
 
 dependencies {
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.mockito:mockito-core:5.0.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.24.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
+    testImplementation("androidx.test:core:1.7.0")
+    testImplementation("org.robolectric:robolectric:4.17")
 }

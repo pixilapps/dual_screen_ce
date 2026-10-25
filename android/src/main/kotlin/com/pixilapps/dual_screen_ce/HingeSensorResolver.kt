@@ -8,7 +8,6 @@ package com.pixilapps.dual_screen_ce
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
-import java.util.*
 
 private const val HINGE_ANGLE_SENSOR_NAME = "hinge angle"
 private const val HINGE_ANGLE_SENSOR_TYPE = "hinge_angle"
@@ -39,12 +38,8 @@ class HingeSensorResolver(private val sensorManager: SensorManager) {
     }
 
     private fun resolveUsingTypeString(): Sensor? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-            sensorManager.getSensorList(Sensor.TYPE_ALL).firstOrNull {
-                it.stringType?.contains(HINGE_ANGLE_SENSOR_TYPE) ?: false
-            }
-        } else {
-            null
+        return sensorManager.getSensorList(Sensor.TYPE_ALL).firstOrNull {
+            it.stringType?.contains(HINGE_ANGLE_SENSOR_TYPE) ?: false
         }
     }
 }

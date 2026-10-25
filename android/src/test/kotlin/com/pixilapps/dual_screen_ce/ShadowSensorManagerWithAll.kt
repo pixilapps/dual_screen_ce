@@ -16,7 +16,7 @@ import org.robolectric.annotation.RealObject
  * Same as [org.robolectric.shadows.ShadowSensorManager] but behaves better when asked to retrieve
  * all sensors (Default robolectric implementation returns an empty list for [Sensor.TYPE_ALL])
  */
-@Implements(value = SensorManager::class, looseSignatures = true)
+@Implements(SensorManager::class)
 class ShadowSensorManagerWithAll {
     var forceListenersToFail = false
     private val sensorMap = hashMapOf<Int, Sensor>()
@@ -68,7 +68,7 @@ class ShadowSensorManagerWithAll {
 
     @Implementation
     fun registerListener(listener: SensorEventListener?, sensor: Sensor?, rate: Int): Boolean {
-        if (forceListenersToFail) {
+        if (forceListenersToFail || listener == null || sensor == null) {
             return false
         }
         listeners.put(listener, sensor)

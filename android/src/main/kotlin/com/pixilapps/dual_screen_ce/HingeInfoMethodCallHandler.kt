@@ -8,6 +8,7 @@ package com.pixilapps.dual_screen_ce
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.SensorManager
+import android.os.Build
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
@@ -28,10 +29,11 @@ class HingeInfoMethodCallHandler(
 
     // Samsung One UI exposes a TYPE_HINGE_ANGLE sensor on non-foldable phones (e.g. S24),
     // so relying on getDefaultSensor alone misreports those devices as foldable. Real
-    // foldable also declare the FEATURE_SENSOR_HINGE_ANGLE system feature; require both.
+    // foldables also declare FEATURE_SENSOR_HINGE_ANGLE, which only exists from API 30.
     private fun hasHingeAngleSensor(): Boolean {
         val sensorPresent = HingeSensorResolver(sensorManager).resolve() != null
-        val featureDeclared = context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE)
+        val featureDeclared = Build.VERSION.SDK_INT < Build.VERSION_CODES.R ||
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE)
         return sensorPresent && featureDeclared
     }
 }
