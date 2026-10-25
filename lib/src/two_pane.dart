@@ -244,21 +244,19 @@ class TwoPane extends StatelessWidget {
   /// Defaults to `true`.
   // final bool showDualPaneFirst;
 
-  /// Called when the mode changes due to the toggle button.
-  ///
-  /// Receives `true` when switching to dual pane, `false` when switching to
-  /// single widget.
+  /// Drives toggle mode: `true` shows the dual-pane layout, `false` shows
+  /// [singleWidget]. Toggle mode needs all three widgets and this notifier;
+  /// without it TwoPane shows the dual-pane layout.
   final ValueNotifier<bool>? switchToSinglePane;
 
   TextDirection _resolveTextDirection(BuildContext context) => textDirection ?? Directionality.of(context);
 
   @override
   Widget build(BuildContext context) {
-    final bool canToggle = singleWidget != null && startPane != null && endPane != null;
-
-    if (canToggle) return _TwoPaneToggle(config: this);
-    if (singleWidget != null) return singleWidget!;
-    return _buildDualPaneLayout(context);
+    final bool hasPanes = startPane != null && endPane != null;
+    if (singleWidget != null && hasPanes && switchToSinglePane != null) return _TwoPaneToggle(config: this);
+    if (hasPanes) return _buildDualPaneLayout(context);
+    return singleWidget!;
   }
 
   Widget _buildDualPaneLayout(BuildContext context) {
