@@ -10,13 +10,17 @@ class _Home extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: TwoPane(
-        startPane: const ColoredBox(color: Colors.amber, child: Center(child: Text('start'))),
+        startPane: const ColoredBox(
+          color: Colors.amber,
+          child: Center(child: Text('start')),
+        ),
         endPane: ColoredBox(
           color: Colors.teal,
           child: Center(
             child: StreamBuilder<double>(
               stream: DualScreenInfo.hingeAngleEvents,
-              builder: (BuildContext context, AsyncSnapshot<double> s) => Text('hinge: ${s.data?.toStringAsFixed(0) ?? '-'}°'),
+              builder: (BuildContext context, AsyncSnapshot<double> s) =>
+                  Text('hinge: ${s.data?.toStringAsFixed(0) ?? '-'}°'),
             ),
           ),
         ),

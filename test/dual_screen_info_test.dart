@@ -20,10 +20,7 @@ void main() {
   });
 
   test('hingeAngleEvents replays the latest angle to late listeners', () async {
-    messenger.setMockStreamHandler(
-      angle,
-      MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) => sink.success(90.0)),
-    );
+    messenger.setMockStreamHandler(angle, MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) => sink.success(90.0)));
     expect(await DualScreenInfo.hingeAngleEvents.first, 90.0);
     expect(await DualScreenInfo.hingeAngleEvents.first, 90.0);
   });
