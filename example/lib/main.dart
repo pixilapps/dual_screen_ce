@@ -10,6 +10,10 @@ class _Home extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: TwoPane(
+        // One pane on phone-sized windows (a closed iPhone Duo, an Android cover screen), two on the inner display.
+        panePriority: MediaQuery.sizeOf(context).width > 600
+            ? TwoPanePriority.both
+            : TwoPanePriority.start,
         startPane: const ColoredBox(
           color: Colors.amber,
           child: Center(child: Text('start')),
