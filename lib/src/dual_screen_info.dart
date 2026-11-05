@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:foldable/foldable.dart';
+
+import 'dual_screen_data.dart';
 
 /// Copyright (c) Microsoft Corporation.
 /// Copyright (c) 2026 Pixil Apps.
@@ -10,83 +11,93 @@ import 'package:foldable/foldable.dart';
 class DualScreenInfo {
   static const EventChannel _hingeAngleEventChannel = EventChannel('dual_screen_ce/hinge_angle');
   static const MethodChannel _hingeInfoMethodChannel = MethodChannel('dual_screen_ce/hinge_info');
+  static const EventChannel _displayStateEventChannel = EventChannel('dual_screen_ce/display_state');
+  static const MethodChannel _verticalBarMethodChannel = MethodChannel('dual_screen_ce/vertical_bar');
   static Stream<double>? _hingeAngleEvents;
-
-  // ponytail: the Duo hinge reports in only after its first update. Raise this if a Duo cold start measures slower.
-  static const Duration _iosSettleTimeout = Duration(milliseconds: 1500);
+  static Stream<DualScreenData>? _displayStateEvents;
 
   static bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  static bool get _isMobile => !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
 
   /// A broadcast stream of hinge angles in degrees: 0 is closed, 180 is flat.
   ///
-  /// Android reads the hinge angle sensor. iOS reads the iPhone Duo hinge
-  /// through the `foldable` plugin. Without a hinge the stream is empty.
+  /// Android reads the hinge angle sensor, iOS the iPhone Duo hinge. Without a hinge the stream is empty. The sensor
+  /// runs only while the stream has listeners; a listener that subscribes later gets the latest angle right away.
   static Stream<double> get hingeAngleEvents {
-    try {
-      _hingeAngleEvents ??= _repeatLatest(
-        _isIOS ? Foldable.hingeAngleStream : _hingeAngleEventChannel.receiveBroadcastStream().map((dynamic event) => event as double),
-      );
-      return _hingeAngleEvents!;
-    } catch (e) {
-      return const Stream<double>.empty();
-    }
+    if (!_isMobile) return const Stream<double>.empty();
+    return _hingeAngleEvents ??= _shareLatest(() => _hingeAngleEventChannel.receiveBroadcastStream().map((dynamic event) => (event as num).toDouble()));
   }
 
-  /// Returns true on Android foldables with a hinge angle sensor and on
-  /// iPhone Duo. Returns false everywhere else, never throws.
+  /// iPhone Duo display state: posture, fold and camera regions, size classes and the vertical bar. Emits on change
+  /// only, starting with the current state. Empty off iOS; on Android, read `DualScreen.of(context)` instead.
+  static Stream<DualScreenData> get displayStateEvents {
+    if (!_isIOS) return const Stream<DualScreenData>.empty();
+    return _displayStateEvents ??= _shareLatest(
+      () => _displayStateEventChannel.receiveBroadcastStream().map((dynamic event) => DualScreenData.fromMap(event as Map<Object?, Object?>)),
+    );
+  }
+
+  /// Returns true on Android foldables with a hinge angle sensor and on iPhone Duo. Returns false everywhere else,
+  /// never throws.
   static Future<bool> get hasHingeAngleSensor async {
+    if (!_isMobile) return false;
     try {
-      if (_isIOS) return await _iosHasHinge();
       return await _hingeInfoMethodChannel.invokeMethod<bool>('hasHingeAngleSensor') ?? false;
     } catch (e) {
       return false;
     }
   }
 
-  static Future<bool> _iosHasHinge() async {
-    final FoldableData snapshot = await Foldable.snapshot;
-    if (snapshot.capabilities.supportLevel != FoldableSupportLevel.unknown) return snapshot.isFoldable;
-    final FoldableData settled = await Foldable.changes
-        .firstWhere((FoldableData d) => d.capabilities.supportLevel != FoldableSupportLevel.unknown, orElse: () => FoldableData.unsupported)
-        .timeout(_iosSettleTimeout, onTimeout: () => FoldableData.unsupported);
-    return settled.isFoldable;
+  /// Turns the system vertical bar off or back on for the app's window (iPhone Duo, iOS 27.1+). Disabled, the status
+  /// bar moves back to the top and the side inset goes away. Returns false where there is no vertical bar to control.
+  static Future<bool> setPreferredVerticalBarBehavior(VerticalBarBehavior behavior) async {
+    if (!_isIOS) return false;
+    try {
+      return await _verticalBarMethodChannel.invokeMethod<bool>('setPreferredVerticalBarBehavior', behavior.name) ?? false;
+    } catch (e) {
+      return false;
+    }
   }
 
-  static Stream<T> _repeatLatest<T>(Stream<T> original) {
-    bool done = false;
+  /// One platform subscription shared by all listeners: opened by the first, closed by the last. The latest event is
+  /// kept across that gap, so a listener that arrives later gets it at once (hinge sensors don't re-send on resubscribe).
+  static Stream<T> _shareLatest<T>(Stream<T> Function() open) {
     T? latest;
-    final Set<MultiStreamController<T>> currentListeners = <MultiStreamController<T>>{};
-    original.listen(
-      (T event) {
-        latest = event;
-        for (MultiStreamController<T> listener in <MultiStreamController<T>>[...currentListeners]) {
-          listener.addSync(event);
-        }
-      },
-      onError: (Object error, StackTrace stack) {
-        for (MultiStreamController<T> listener in <MultiStreamController<T>>[...currentListeners]) {
-          listener.addErrorSync(error, stack);
-        }
-      },
-      onDone: () {
-        done = true;
-        latest = null;
-        for (MultiStreamController<T> listener in currentListeners) {
-          listener.closeSync();
-        }
-        currentListeners.clear();
-      },
-    );
-    return Stream<T>.multi((MultiStreamController<T> controller) {
-      if (done) {
-        controller.close();
-        return;
+    StreamSubscription<T>? source;
+    final Set<MultiStreamController<T>> listeners = <MultiStreamController<T>>{};
+    void closeAll() {
+      source = null;
+      for (final MultiStreamController<T> listener in <MultiStreamController<T>>[...listeners]) {
+        listener.closeSync();
       }
-      currentListeners.add(controller);
-      final T? latestValue = latest;
-      if (latestValue != null) controller.add(latestValue);
+      listeners.clear();
+    }
+
+    return Stream<T>.multi((MultiStreamController<T> controller) {
+      listeners.add(controller);
+      final T? value = latest;
+      if (value != null) controller.add(value);
+      source ??= open().listen(
+        (T event) {
+          latest = event;
+          for (final MultiStreamController<T> listener in <MultiStreamController<T>>[...listeners]) {
+            listener.addSync(event);
+          }
+        },
+        onError: (Object error, StackTrace stack) {
+          // No native side (an unsupported platform or a test without a mock): end quietly, like a device without a hinge.
+          if (error is MissingPluginException) return closeAll();
+          for (final MultiStreamController<T> listener in <MultiStreamController<T>>[...listeners]) {
+            listener.addErrorSync(error, stack);
+          }
+        },
+        onDone: closeAll,
+      );
       controller.onCancel = () {
-        if (!done) currentListeners.remove(controller);
+        listeners.remove(controller);
+        if (listeners.isNotEmpty) return;
+        source?.cancel();
+        source = null;
       };
     });
   }

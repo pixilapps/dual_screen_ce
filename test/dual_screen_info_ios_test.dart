@@ -1,71 +1,89 @@
-import 'dart:async';
-import 'dart:ui' show DisplayFeature;
-
 import 'package:dual_screen_ce/dual_screen_ce.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foldable/foldable.dart';
 
-class _FakeFoldable extends FoldablePlatform {
-  _FakeFoldable(this.snapshot);
-  final FoldableData snapshot;
-  final StreamController<FoldableData> controller = StreamController<FoldableData>.broadcast();
-
-  @override
-  Future<FoldableData> getSnapshot() async => snapshot;
-
-  @override
-  Stream<FoldableData> get events => controller.stream;
-}
-
-FoldableData _data(FoldableSupportLevel level, {double? angle}) => FoldableData(
-  capabilities: FoldableCapabilities(
-    supportLevel: level,
-    isFoldable: level == FoldableSupportLevel.available,
-    hingeApiPresent: level != FoldableSupportLevel.unsupported,
-    regionApiPresent: true,
-    angleUnitVerified: true,
-    strategy: 'test',
-  ),
-  status: HingeStatus.partiallyOpen,
-  angleDegrees: angle,
-  regions: const <ReservedRegion>[],
-  displayFeatures: const <DisplayFeature>[],
-);
+// The inner display, open flat in landscape, as the iPhone Duo simulator reports it (doc/iphone_duo_matrix.md).
+const Map<String, Object?> innerFlatLandscape = <String, Object?>{
+  'hasHinge': true,
+  'posture': 'flat',
+  'horizontalSizeClass': 'regular',
+  'verticalSizeClass': 'regular',
+  'regions': <Object?>[
+    <String, Object?>{'kind': 'division', 'rect': <double>[455.5, 0, 40, 669], 'margins': <double>[20, 0, 20, 0], 'isActive': false},
+    <String, Object?>{'kind': 'occlusion', 'rect': <double>[677.3, 21, 58, 37], 'margins': <double>[0, 0, 0, 0], 'isActive': false},
+    <String, Object?>{'kind': 'occlusion', 'rect': <double>[867, 0, 84, 124], 'margins': <double>[0, 0, 0, 0], 'isActive': true},
+  ],
+  'verticalBar': <String, Object?>{'edge': 'trailing', 'side': 'right', 'rect': <double>[879, 124, 48, 511]},
+};
 
 void main() {
-  setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.iOS);
-  tearDown(() => debugDefaultTargetPlatformOverride = null);
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const MethodChannel info = MethodChannel('dual_screen_ce/hinge_info');
+  const MethodChannel bar = MethodChannel('dual_screen_ce/vertical_bar');
+  const EventChannel state = EventChannel('dual_screen_ce/display_state');
+  const EventChannel angle = EventChannel('dual_screen_ce/hinge_angle');
+  final TestDefaultBinaryMessenger messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
-  test('a settled Duo snapshot answers true immediately', () async {
-    FoldablePlatform.instance = _FakeFoldable(_data(FoldableSupportLevel.available));
+  setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.iOS);
+  tearDown(() {
+    debugDefaultTargetPlatformOverride = null;
+    messenger.setMockMethodCallHandler(info, null);
+    messenger.setMockMethodCallHandler(bar, null);
+  });
+
+  test('hasHingeAngleSensor takes the native answer, which waits for the first hinge update itself', () async {
+    messenger.setMockMethodCallHandler(info, (MethodCall call) async => call.method == 'hasHingeAngleSensor');
     expect(await DualScreenInfo.hasHingeAngleSensor, isTrue);
   });
 
-  test('iOS without hinge APIs answers false', () async {
-    FoldablePlatform.instance = _FakeFoldable(_data(FoldableSupportLevel.unsupported));
-    expect(await DualScreenInfo.hasHingeAngleSensor, isFalse);
+  test('displayStateEvents decodes the Duo snapshot', () async {
+    messenger.setMockStreamHandler(state, MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) => sink.success(innerFlatLandscape)));
+    final DualScreenData data = await DualScreenInfo.displayStateEvents.first;
+    expect(data.isFoldable, isTrue);
+    expect(data.posture, DevicePosture.flat);
+    expect(data.horizontalSizeClass, SizeClass.regular);
+    expect(data.fold, isNull, reason: 'a flat Duo has an inactive fold');
+    expect(data.regions.first.margins, const EdgeInsets.symmetric(horizontal: 20));
+    expect(data.verticalBar, const VerticalBar(side: AxisDirection.right, isLeading: false, rect: Rect.fromLTWH(879, 124, 48, 511)));
   });
 
-  test('an unknown snapshot waits for the first settled update', () async {
-    final _FakeFoldable fake = _FakeFoldable(_data(FoldableSupportLevel.unknown));
-    FoldablePlatform.instance = fake;
-    final Future<bool> result = DualScreenInfo.hasHingeAngleSensor;
-    await Future<void>.delayed(Duration.zero);
-    fake.controller.add(_data(FoldableSupportLevel.available));
-    expect(await result, isTrue);
+  test('setPreferredVerticalBarBehavior sends the behavior name', () async {
+    final List<MethodCall> calls = <MethodCall>[];
+    messenger.setMockMethodCallHandler(bar, (MethodCall call) async {
+      calls.add(call);
+      return true;
+    });
+    expect(await DualScreenInfo.setPreferredVerticalBarBehavior(VerticalBarBehavior.disabled), isTrue);
+    expect(calls.single.method, 'setPreferredVerticalBarBehavior');
+    expect(calls.single.arguments, 'disabled');
   });
 
-  test('an unknown snapshot that never settles gives up as false', () async {
-    FoldablePlatform.instance = _FakeFoldable(_data(FoldableSupportLevel.unknown));
-    expect(await DualScreenInfo.hasHingeAngleSensor, isFalse);
+  test('the hinge stream closes the platform side with its last listener and keeps the latest angle', () async {
+    int listens = 0;
+    int cancels = 0;
+    messenger.setMockStreamHandler(
+      angle,
+      MockStreamHandler.inline(
+        onListen: (Object? args, MockStreamHandlerEventSink sink) {
+          listens++;
+          if (listens == 1) sink.success(92.5);
+        },
+        onCancel: (Object? args) => cancels++,
+      ),
+    );
+    expect(await DualScreenInfo.hingeAngleEvents.first, 92.5);
+    await pumpEventQueue();
+    expect(cancels, 1, reason: 'no listener left, so the sensor is released');
+    // A later listener gets the cached angle at once, although the platform sends nothing on resubscribe.
+    expect(await DualScreenInfo.hingeAngleEvents.first, 92.5);
+    expect(listens, 2);
   });
 
-  test('hingeAngleEvents carries the Duo angle in degrees', () async {
-    final _FakeFoldable fake = _FakeFoldable(_data(FoldableSupportLevel.available));
-    FoldablePlatform.instance = fake;
-    final Future<double> first = DualScreenInfo.hingeAngleEvents.first;
-    fake.controller.add(_data(FoldableSupportLevel.available, angle: 92.5));
-    expect(await first, 92.5);
+  test('off iOS there is no display state and no vertical bar to control', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    expect(await DualScreenInfo.displayStateEvents.isEmpty, isTrue);
+    expect(await DualScreenInfo.setPreferredVerticalBarBehavior(VerticalBarBehavior.disabled), isFalse);
   });
 }
