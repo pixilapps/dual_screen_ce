@@ -11,11 +11,30 @@ const Map<String, Object?> innerFlatLandscape = <String, Object?>{
   'horizontalSizeClass': 'regular',
   'verticalSizeClass': 'regular',
   'regions': <Object?>[
-    <String, Object?>{'kind': 'division', 'rect': <double>[455.5, 0, 40, 669], 'margins': <double>[20, 0, 20, 0], 'isActive': false},
-    <String, Object?>{'kind': 'occlusion', 'rect': <double>[677.3, 21, 58, 37], 'margins': <double>[0, 0, 0, 0], 'isActive': false},
-    <String, Object?>{'kind': 'occlusion', 'rect': <double>[867, 0, 84, 124], 'margins': <double>[0, 0, 0, 0], 'isActive': true},
+    <String, Object?>{
+      'kind': 'division',
+      'rect': <double>[455.5, 0, 40, 669],
+      'margins': <double>[20, 0, 20, 0],
+      'isActive': false,
+    },
+    <String, Object?>{
+      'kind': 'occlusion',
+      'rect': <double>[677.3, 21, 58, 37],
+      'margins': <double>[0, 0, 0, 0],
+      'isActive': false,
+    },
+    <String, Object?>{
+      'kind': 'occlusion',
+      'rect': <double>[867, 0, 84, 124],
+      'margins': <double>[0, 0, 0, 0],
+      'isActive': true,
+    },
   ],
-  'verticalBar': <String, Object?>{'edge': 'trailing', 'side': 'right', 'rect': <double>[879, 124, 48, 511]},
+  'verticalBar': <String, Object?>{
+    'edge': 'trailing',
+    'side': 'right',
+    'rect': <double>[879, 124, 48, 511],
+  },
 };
 
 void main() {
@@ -39,7 +58,10 @@ void main() {
   });
 
   test('displayStateEvents decodes the Duo snapshot', () async {
-    messenger.setMockStreamHandler(state, MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) => sink.success(innerFlatLandscape)));
+    messenger.setMockStreamHandler(
+      state,
+      MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) => sink.success(innerFlatLandscape)),
+    );
     final DualScreenData data = await DualScreenInfo.displayStateEvents.first;
     expect(data.isFoldable, isTrue);
     expect(data.posture, DevicePosture.flat);

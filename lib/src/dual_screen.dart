@@ -17,8 +17,7 @@ class DualScreen extends InheritedModel<DualScreenAspect> {
   final DualScreenData data;
 
   /// The nearest data, or `null` without a `DualScreenScope` above. Depends on [aspect] only, or on everything.
-  static DualScreenData? maybeOf(BuildContext context, [DualScreenAspect? aspect]) =>
-      InheritedModel.inheritFrom<DualScreen>(context, aspect: aspect)?.data;
+  static DualScreenData? maybeOf(BuildContext context, [DualScreenAspect? aspect]) => InheritedModel.inheritFrom<DualScreen>(context, aspect: aspect)?.data;
 
   /// The nearest data, or [DualScreenData.fallback]. Rebuilds on any change.
   static DualScreenData of(BuildContext context) => maybeOf(context) ?? DualScreenData.fallback;

@@ -361,16 +361,28 @@ class TwoPane extends StatelessWidget {
                 {
                   startPaneFlex = leftFlex;
                   endPaneFlex = rightFlex;
-                  resolvedStartPane = MediaQuery(data: _paneData(mediaQuery, leftScreen, screenOffset, .only(right: inset)), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _paneData(mediaQuery, rightScreen, screenOffset, .only(left: inset)), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, leftScreen, screenOffset, .only(right: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, rightScreen, screenOffset, .only(left: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
               case .rtl:
                 {
                   startPaneFlex = rightFlex;
                   endPaneFlex = leftFlex;
-                  resolvedStartPane = MediaQuery(data: _paneData(mediaQuery, rightScreen, screenOffset, .only(left: inset)), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _paneData(mediaQuery, leftScreen, screenOffset, .only(right: inset)), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, rightScreen, screenOffset, .only(left: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, leftScreen, screenOffset, .only(right: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
             }
@@ -396,16 +408,28 @@ class TwoPane extends StatelessWidget {
                 {
                   startPaneFlex = topPane;
                   endPaneFlex = bottomPane;
-                  resolvedStartPane = MediaQuery(data: _paneData(mediaQuery, topScreen, screenOffset, .only(bottom: inset)), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _paneData(mediaQuery, bottomScreen, screenOffset, .only(top: inset)), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, topScreen, screenOffset, .only(bottom: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, bottomScreen, screenOffset, .only(top: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
               case .up:
                 {
                   startPaneFlex = bottomPane;
                   endPaneFlex = topPane;
-                  resolvedStartPane = MediaQuery(data: _paneData(mediaQuery, bottomScreen, screenOffset, .only(top: inset)), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _paneData(mediaQuery, topScreen, screenOffset, .only(bottom: inset)), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, bottomScreen, screenOffset, .only(top: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, topScreen, screenOffset, .only(bottom: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
             }

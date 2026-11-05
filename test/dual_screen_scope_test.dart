@@ -15,9 +15,18 @@ Map<String, Object?> _duo({required String posture, required bool foldActive}) =
   'horizontalSizeClass': 'regular',
   'verticalSizeClass': 'regular',
   'regions': <Object?>[
-    <String, Object?>{'kind': 'division', 'rect': <double>[455.5, 0, 40, 669], 'margins': <double>[20, 0, 20, 0], 'isActive': foldActive},
+    <String, Object?>{
+      'kind': 'division',
+      'rect': <double>[455.5, 0, 40, 669],
+      'margins': <double>[20, 0, 20, 0],
+      'isActive': foldActive,
+    },
   ],
-  'verticalBar': <String, Object?>{'edge': 'trailing', 'side': 'right', 'rect': <double>[879, 124, 48, 511]},
+  'verticalBar': <String, Object?>{
+    'edge': 'trailing',
+    'side': 'right',
+    'rect': <double>[879, 124, 48, 511],
+  },
 };
 
 /// Records every MediaQuery and DualScreen value it sees, and counts its own rebuilds.
@@ -58,7 +67,11 @@ void main() {
   final TestDefaultBinaryMessenger messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   testWidgets('Android: data comes from the display features, MediaQuery is left alone', (WidgetTester tester) async {
-    const DisplayFeature fold = DisplayFeature(bounds: Rect.fromLTWH(420, 0, 0, 800), type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened);
+    const DisplayFeature fold = DisplayFeature(
+      bounds: Rect.fromLTWH(420, 0, 0, 800),
+      type: DisplayFeatureType.fold,
+      state: DisplayFeatureState.postureHalfOpened,
+    );
     final GlobalKey<_ProbeState> probe = GlobalKey<_ProbeState>();
     await tester.pumpWidget(
       MediaQuery(
@@ -76,14 +89,21 @@ void main() {
     final StreamController<Object?> events = StreamController<Object?>();
     messenger.setMockStreamHandler(
       _state,
-      MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) {
-        events.stream.listen(sink.success);
-      }),
+      MockStreamHandler.inline(
+        onListen: (Object? args, MockStreamHandlerEventSink sink) {
+          events.stream.listen(sink.success);
+        },
+      ),
     );
     addTearDown(() => messenger.setMockStreamHandler(_state, null));
     final GlobalKey<_ProbeState> probe = GlobalKey<_ProbeState>();
     await tester.pumpWidget(const MediaQuery(data: MediaQueryData(), child: SizedBox()));
-    await tester.pumpWidget(MediaQuery(data: const MediaQueryData(), child: DualScreenScope(child: _Probe(key: probe))));
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(),
+        child: DualScreenScope(child: _Probe(key: probe)),
+      ),
+    );
     final _ProbeState first = probe.currentState!;
 
     // Mocked platform events arrive over a few microtask turns, not within one frame.
@@ -111,9 +131,18 @@ void main() {
       MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) => sink.success(_duo(posture: 'halfOpened', foldActive: true))),
     );
     addTearDown(() => messenger.setMockStreamHandler(_state, null));
-    const DisplayFeature engineFold = DisplayFeature(bounds: Rect.fromLTWH(455.5, 0, 40, 669), type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened);
+    const DisplayFeature engineFold = DisplayFeature(
+      bounds: Rect.fromLTWH(455.5, 0, 40, 669),
+      type: DisplayFeatureType.fold,
+      state: DisplayFeatureState.postureHalfOpened,
+    );
     final GlobalKey<_ProbeState> probe = GlobalKey<_ProbeState>();
-    await tester.pumpWidget(MediaQuery(data: const MediaQueryData(displayFeatures: <DisplayFeature>[engineFold]), child: DualScreenScope(child: _Probe(key: probe))));
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(displayFeatures: <DisplayFeature>[engineFold]),
+        child: DualScreenScope(child: _Probe(key: probe)),
+      ),
+    );
     for (int i = 0; i < 4; i++) {
       await tester.pump();
     }

@@ -57,7 +57,9 @@ class _DualScreenScopeState extends State<DualScreenScope> {
       child: MediaQuery(
         data: publish
             ? mediaQuery.copyWith(
-                displayFeatures: <DisplayFeature>[DisplayFeature(bounds: fold.rect, type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened)],
+                displayFeatures: <DisplayFeature>[
+                  DisplayFeature(bounds: fold.rect, type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened),
+                ],
               )
             : mediaQuery,
         child: widget.child,

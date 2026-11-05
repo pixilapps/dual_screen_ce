@@ -64,7 +64,10 @@ void main() {
             DisplayFeature(bounds: Rect.fromLTWH(455.5, 0, 40, 669), type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened),
           ],
         ),
-        child: Directionality(textDirection: TextDirection.ltr, child: TwoPane(startPane: pane(), endPane: pane())),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: TwoPane(startPane: pane(), endPane: pane()),
+        ),
       ),
     );
     // The leading pane gains 20 on its right, the trailing pane 20 on its left and keeps the 84pt bar column.
