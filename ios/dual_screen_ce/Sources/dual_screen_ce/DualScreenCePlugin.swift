@@ -81,7 +81,7 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
   }
 
   private func setVerticalBarBehavior(_ behavior: Int) -> Bool {
-    barBehavior = behavior
+    barBehavior = behavior // kept, and re-applied on attach if the view controller is not there yet
     guard let controller = registrar?.viewController, DuoRuntime.installVerticalBarBehaviorOverride(on: controller) else { return false }
     DuoRuntime.setVerticalBarBehavior(behavior, on: controller)
     scheduleEmit()
@@ -131,6 +131,10 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
       hinge = interaction
     }
     armHingeQueryTimeout()
+    // A behavior set before the view existed, or for a view controller that has since been replaced.
+    if barBehavior != 0, let controller = registrar?.viewController, DuoRuntime.installVerticalBarBehaviorOverride(on: controller) {
+      DuoRuntime.setVerticalBarBehavior(barBehavior, on: controller)
+    }
     scheduleEmit()
   }
 
