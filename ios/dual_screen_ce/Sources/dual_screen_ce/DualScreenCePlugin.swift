@@ -26,6 +26,9 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
 
   // ponytail: the Duo reports its hinge on the first update after attach. Raise this if a cold start measures slower.
   private static let hingeQueryTimeout: TimeInterval = 1.5
+  /// Upper bound when no scene ever shows a Flutter view (a headless engine).
+  private static let hingeQueryCap: TimeInterval = 5
+  private var hingeQueryTimeoutArmed = false
 
   init(registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
@@ -67,15 +70,11 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
       guard DuoRuntime.hasHingeAPI else { return result(false) }
       pendingHingeQueries.append(result)
       refreshAttachment()
-      DispatchQueue.main.asyncAfter(deadline: .now() + Self.hingeQueryTimeout) { [weak self] in self?.resolveHingeQueries() }
+      armHingeQueryTimeout()
+      DispatchQueue.main.asyncAfter(deadline: .now() + Self.hingeQueryCap) { [weak self] in self?.resolveHingeQueries() }
     case "setPreferredVerticalBarBehavior":
       let disabled = (call.arguments as? String) == "disabled"
       result(setVerticalBarBehavior(disabled ? 1 : 0))
-    case "debugDump":
-      result(debugDump())
-    case "debugProbePresentation":
-      guard let controller = registrar?.viewController else { return result(nil) }
-      DebugProbe.probePresentation(call.arguments as? String ?? "alert", from: controller, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -121,14 +120,28 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
     if probe.superview !== host {
       probe.frame = host.bounds
       host.insertSubview(probe, at: 0)
-      probe.onChange = { [weak self] in self?.scheduleEmit() }
+      probe.onChange = { [weak self] in
+        self?.armHingeQueryTimeout() // the view may reach its window after attach
+        self?.scheduleEmit()
+      }
       self.probe = probe
     }
     if hinge == nil, let interaction = DuoRuntime.makeHingeInteraction({ [weak self] status, angle in self?.hingeUpdated(status, angle) }) {
       probe.addInteraction(interaction)
       hinge = interaction
     }
+    armHingeQueryTimeout()
     scheduleEmit()
+  }
+
+  /// Starts the hinge-query wait once the probe is on screen: at boot the scene may connect well after `main()` asks.
+  private func armHingeQueryTimeout() {
+    guard !pendingHingeQueries.isEmpty, !hingeQueryTimeoutArmed, probe?.window != nil else { return }
+    hingeQueryTimeoutArmed = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.hingeQueryTimeout) { [weak self] in
+      self?.hingeQueryTimeoutArmed = false
+      self?.resolveHingeQueries()
+    }
   }
 
   /// The view controller is nil until the scene connects; the scene delegate re-attaches too.
@@ -229,13 +242,6 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
       isRightToLeft: isRightToLeft,
       barRect: barRect,
       barEnabled: barBehavior == 0)
-  }
-
-  // MARK: - Debug
-
-  private func debugDump() -> [String: Any] {
-    guard let view = probe ?? registrar?.viewController?.view else { return ["attached": false] }
-    return DebugProbe.dump(view: view, controller: registrar?.viewController, state: currentState(), hingeAngle: hingeAngle)
   }
 }
 

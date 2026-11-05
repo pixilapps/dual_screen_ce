@@ -14,7 +14,6 @@ enum DuoRuntime {
   private typealias ClassUIntGetter = @convention(c) (AnyClass, Selector, UInt) -> Unmanaged<AnyObject>?
   private typealias ClassUIntFloatGetter = @convention(c) (AnyClass, Selector, UInt, CGFloat) -> Unmanaged<AnyObject>?
   private typealias ViewObjectGetter = @convention(c) (UIView, Selector, AnyObject) -> Unmanaged<AnyObject>?
-  private typealias ViewInsetsGetter = @convention(c) (UIView, Selector, AnyObject) -> UIEdgeInsets
   private typealias ViewRegionsGetter = @convention(c) (UIView, Selector, AnyObject, UInt) -> Unmanaged<NSArray>?
   private typealias InitWithBlock = @convention(c) (AnyObject, Selector, AnyObject) -> Unmanaged<AnyObject>?
 
@@ -114,24 +113,10 @@ enum DuoRuntime {
     return factory.imp(cls, factory.sel, edge.rawValue)?.takeUnretainedValue()
   }
 
-  /// `UIViewLayoutRegion.safeAreaLayoutRegionWithCornerAdaptation:` (iOS 26). `axis`: 0 none, 1 horizontal, 2 vertical.
-  static func cornerAdaptedSafeArea(axis: UInt) -> AnyObject? {
-    guard let cls = NSClassFromString("UIViewLayoutRegion"),
-          let factory = classMethod(cls, "safeAreaLayoutRegionWithCornerAdaptation:", as: ClassUIntGetter.self)
-    else { return nil }
-    return factory.imp(cls, factory.sel, axis)?.takeUnretainedValue()
-  }
-
   /// `-[UIView layoutGuideForLayoutRegion:]` (iOS 26).
   static func layoutGuide(for region: AnyObject, in view: UIView) -> UILayoutGuide? {
     guard let getter = instanceMethod(UIView.self, "layoutGuideForLayoutRegion:", as: ViewObjectGetter.self) else { return nil }
     return getter.imp(view, getter.sel, region)?.takeUnretainedValue() as? UILayoutGuide
-  }
-
-  /// `-[UIView edgeInsetsForLayoutRegion:]` (iOS 26).
-  static func edgeInsets(for region: AnyObject, in view: UIView) -> UIEdgeInsets? {
-    guard let getter = instanceMethod(UIView.self, "edgeInsetsForLayoutRegion:", as: ViewInsetsGetter.self) else { return nil }
-    return getter.imp(view, getter.sel, region)
   }
 
   // MARK: - Vertical bar behavior (UIViewController, iOS 27.1)
