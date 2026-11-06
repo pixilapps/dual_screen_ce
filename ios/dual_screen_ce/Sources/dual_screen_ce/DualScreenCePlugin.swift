@@ -55,9 +55,9 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
 
   // MARK: - Scene lifecycle
 
-  public func sceneWillEnterForeground(_ scene: UIScene) { refreshAttachment() }
+  public func sceneWillEnterForeground(_ scene: UIScene) { reapplyBehavior(); refreshAttachment() }
 
-  public func sceneDidBecomeActive(_ scene: UIScene) { refreshAttachment() }
+  public func sceneDidBecomeActive(_ scene: UIScene) { reapplyBehavior(); refreshAttachment() }
 
   public func sceneDidDisconnect(_ scene: UIScene) { detach() }
 
@@ -80,6 +80,12 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
     }
   }
 
+  /// A behavior set before the view controller existed applies as soon as it does, listened to or not.
+  private func reapplyBehavior() {
+    guard barBehavior != 0, let controller = registrar?.viewController, DuoRuntime.installVerticalBarBehaviorOverride(on: controller) else { return }
+    DuoRuntime.setVerticalBarBehavior(barBehavior, on: controller)
+  }
+
   private func setVerticalBarBehavior(_ behavior: Int) -> Bool {
     barBehavior = behavior // kept, and re-applied on attach if the view controller is not there yet
     guard let controller = registrar?.viewController, DuoRuntime.installVerticalBarBehaviorOverride(on: controller) else { return false }
@@ -98,10 +104,25 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
   }
 
   private func setAngleSink(_ sink: FlutterEventSink?) {
+    // Without a hinge the stream is empty: it ends at once, as on Android and in 1.0.0.
+    if let sink, !DuoRuntime.hasHingeAPI || hasHinge == false {
+      sink(FlutterEndOfEventStream)
+      return
+    }
     angleSink = sink
     lastAngle = nil
     refreshAttachment()
     emitAngle()
+  }
+
+  /// No hinge after all: answers the queries, sends the last state, ends the angle stream and stops observing.
+  private func settleWithoutHinge() {
+    hasHinge = false
+    resolveHingeQueries()
+    emitNow()
+    angleSink?(FlutterEndOfEventStream)
+    angleSink = nil
+    detach()
   }
 
   private var wantsObservation: Bool { displaySink != nil || angleSink != nil || !pendingHingeQueries.isEmpty }
@@ -138,13 +159,15 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
     scheduleEmit()
   }
 
-  /// Starts the hinge-query wait once the probe is on screen: at boot the scene may connect well after `main()` asks.
+  /// Starts the hinge wait once the probe is on screen (at boot the scene may connect well after `main()` asks). A device
+  /// with a hinge reports within milliseconds; one without never calls back, so silence settles "no hinge".
   private func armHingeQueryTimeout() {
-    guard !pendingHingeQueries.isEmpty, !hingeQueryTimeoutArmed, probe?.window != nil else { return }
+    guard hasHinge == nil, !hingeQueryTimeoutArmed, probe?.window != nil else { return }
     hingeQueryTimeoutArmed = true
     DispatchQueue.main.asyncAfter(deadline: .now() + Self.hingeQueryTimeout) { [weak self] in
-      self?.hingeQueryTimeoutArmed = false
-      self?.resolveHingeQueries()
+      guard let self else { return }
+      self.hingeQueryTimeoutArmed = false
+      if self.hasHinge == nil, self.probe?.window != nil { self.settleWithoutHinge() } else { self.resolveHingeQueries() }
     }
   }
 
@@ -172,12 +195,10 @@ public final class DualScreenCePlugin: NSObject, FlutterPlugin, FlutterSceneLife
 
   private func hingeUpdated(_ status: Int?, _ angleRadians: Double?) {
     guard let status else {
-      // nil means the interaction left a hierarchy that provides hinge updates. Only while on screen does it mean no hinge.
+      // nil arrives when the interaction leaves a hierarchy that provides hinge updates, including on a Duo while it is
+      // being removed, so it settles "no hinge" only before any hinge was seen.
       guard probe?.window != nil, hasHinge == nil else { return }
-      hasHinge = false
-      resolveHingeQueries()
-      emitNow()
-      detach()
+      settleWithoutHinge()
       return
     }
     hasHinge = true

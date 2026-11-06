@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dual_screen_ce/dual_screen_ce.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -41,5 +43,16 @@ void main() {
     } else {
       expect(data == null || !data!.isFoldable, isTrue);
     }
+  });
+
+  testWidgets('without a hinge the hinge angle stream ends', (WidgetTester tester) async {
+    if (await DualScreenInfo.hasHingeAngleSensor) return; // a device with a hinge keeps it open
+    final Completer<void> done = Completer<void>();
+    final StreamSubscription<double> subscription = DualScreenInfo.hingeAngleEvents.listen((_) {}, onDone: done.complete);
+    addTearDown(subscription.cancel);
+    await tester.pumpWidget(const SizedBox());
+    // Ends at once below iOS 27.1, or once the native side has settled "no hinge" (1.5 s after the view is on screen).
+    await tester.runAsync(() => done.future.timeout(const Duration(seconds: 6)));
+    expect(done.isCompleted, isTrue);
   });
 }

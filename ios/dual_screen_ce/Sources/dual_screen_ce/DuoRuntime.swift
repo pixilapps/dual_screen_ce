@@ -42,17 +42,21 @@ enum DuoRuntime {
           let allocated = alloc.imp(cls, alloc.sel)
     else { return nil }
     let handler: @convention(block) (AnyObject, AnyObject) -> Void = { _, update in
-      guard let hinge = (update as? NSObject)?.value(forKey: "hinge") as? NSObject else { return onUpdate(nil, nil) }
-      onUpdate((hinge.value(forKey: "status") as? NSNumber)?.intValue, (hinge.value(forKey: "angle") as? NSNumber)?.doubleValue)
+      guard let hinge = read("hinge", of: update) as? NSObject else { return onUpdate(nil, nil) }
+      onUpdate((read("status", of: hinge) as? NSNumber)?.intValue, (read("angle", of: hinge) as? NSNumber)?.doubleValue)
     }
     // `init` consumes the +1 from `alloc` and returns its own +1, hence unretained in, retained out.
     let created = initializer.imp(allocated.takeUnretainedValue(), initializer.sel, unsafeBitCast(handler, to: AnyObject.self))
     return created?.takeRetainedValue() as? UIInteraction
   }
 
-  static func setEnabled(_ enabled: Bool, on interaction: UIInteraction) {
-    guard let object = interaction as? NSObject, object.responds(to: NSSelectorFromString("setEnabled:")) else { return }
-    object.setValue(enabled, forKey: "enabled")
+  /// `value(forKey:)` only when `object` has the getter (`key`, or `isKey` for a flag): a key a later OS renames would
+  /// otherwise raise an `NSUndefinedKeyException`, which Swift cannot catch.
+  static func read(_ key: String, of object: AnyObject) -> Any? {
+    guard let object = object as? NSObject else { return nil }
+    let flagGetter = "is" + key.prefix(1).uppercased() + key.dropFirst()
+    guard object.responds(to: NSSelectorFromString(key)) || object.responds(to: NSSelectorFromString(flagGetter)) else { return nil }
+    return object.value(forKey: key)
   }
 
   // MARK: - Reserved regions (UIView.ReservedRegion, iOS 27.1)
@@ -77,14 +81,14 @@ enum DuoRuntime {
           let query = instanceMethod(UIView.self, "reservedRegionsOfKind:options:", as: ViewRegionsGetter.self),
           let regions = query.imp(view, query.sel, kindObject, 1 /* includeInactive */)?.takeUnretainedValue()
     else { return [] }
-    return regions.compactMap { item in
-      guard let region = item as? NSObject, let frame = (region.value(forKey: "frame") as? NSValue)?.cgRectValue else { return nil }
+    return regions.compactMap { element in
+      guard let item = element as? NSObject, let frame = (read("frame", of: item) as? NSValue)?.cgRectValue else { return nil }
       return RawRegion(
         kind: kind,
         frame: frame,
-        margins: (region.value(forKey: "margins") as? NSValue)?.uiEdgeInsetsValue ?? .zero,
+        margins: (read("margins", of: item) as? NSValue)?.uiEdgeInsetsValue ?? .zero,
         // KVC finds the `isActive` getter. An unreadable flag reads inactive: a 40pt inactive fold has a real frame.
-        isActive: (region.value(forKey: "active") as? NSNumber)?.boolValue ?? false)
+        isActive: (read("active", of: item) as? NSNumber)?.boolValue ?? false)
     }
   }
 

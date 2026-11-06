@@ -1,6 +1,6 @@
 name: dual_screen_ce
 description: Community Edition of Microsoft's archived dual_screen package. TwoPane layout and hinge angle for Android foldables and iPhone Duo.
-version: 1.1.0
+version: 1.1.1
 homepage: https://github.com/pixilapps/dual_screen_ce
 repository: https://github.com/pixilapps/dual_screen_ce
 issue_tracker: https://github.com/pixilapps/dual_screen_ce/issues

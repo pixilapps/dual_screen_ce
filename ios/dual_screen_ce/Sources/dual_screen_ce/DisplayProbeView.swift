@@ -22,13 +22,24 @@ final class DisplayProbeView: UIView {
     backgroundColor = .clear
     autoresizingMask = [.flexibleWidth, .flexibleHeight]
     if #available(iOS 17.0, *) {
-      var traits: [UITrait] = [UITraitHorizontalSizeClass.self, UITraitVerticalSizeClass.self, UITraitLayoutDirection.self]
-      traits += DuoRuntime.traitsAffectingVerticalBarEdge.compactMap { $0 as? UITrait }
-      registerForTraitChanges(traits) { (view: DisplayProbeView, _: UITraitCollection) in view.onChange?() }
+      registerForTraitChanges([UITraitHorizontalSizeClass.self, UITraitVerticalSizeClass.self, UITraitLayoutDirection.self]) {
+        (view: DisplayProbeView, _: UITraitCollection) in view.onChange?()
+      }
+      registerForVerticalBarTraits()
     }
   }
 
   required init?(coder: NSCoder) { nil }
+
+  /// The traits behind `verticalBarEdge` come from the runtime as class objects, which Swift cannot cast to `UITrait`, so
+  /// they are registered through the Objective-C method, which takes the classes as they are.
+  private func registerForVerticalBarTraits() {
+    let traits = DuoRuntime.traitsAffectingVerticalBarEdge
+    let selector = NSSelectorFromString("registerForTraitChanges:withHandler:")
+    guard !traits.isEmpty, responds(to: selector) else { return }
+    let handler: @convention(block) (AnyObject, UITraitCollection) -> Void = { [weak self] _, _ in self?.onChange?() }
+    _ = perform(selector, with: traits as NSArray, with: unsafeBitCast(handler, to: AnyObject.self))
+  }
 
   override func layoutSubviews() {
     super.layoutSubviews()

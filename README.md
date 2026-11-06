@@ -163,8 +163,9 @@ need to avoid the fold; fixed controls do, which is what `DualScreen.of(context)
 Build with Xcode 27.1 or later (iOS 27.1 SDK) to get the full screen, the vertical bar and reserved regions, adopt the
 UIScene lifecycle (required by the iOS 27 SDK), and use a deployment target of iOS 15 or later. The plugin itself still
 compiles with older Xcode versions; the iPhone Duo features then report nothing. It observes the display only while a
-`DualScreenScope` or a stream listener is active, attaches to its own engine's Flutter view, and does nothing at all on
-devices without a hinge.
+`DualScreenScope` or a stream listener is active and attaches to its own engine's Flutter view. Below iOS 27.1 it does
+nothing; on an iOS 27.1+ device without a hinge it watches for at most 1.5 s after the view is on screen, then reports
+no hinge, ends the angle stream and stops.
 
 # Testing
 

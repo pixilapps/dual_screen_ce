@@ -49,7 +49,9 @@ class DualScreenInfo {
   }
 
   /// Turns the system vertical bar off or back on for the app's window (iPhone Duo, iOS 27.1+). Disabled, the status
-  /// bar moves back to the top and the side inset goes away. Returns false where there is no vertical bar to control.
+  /// bar moves back to the top and the side inset goes away. Returns whether the behavior reached the app's view
+  /// controller (false before iOS 27.1, off iOS, and before the view controller exists, in which case the behavior is
+  /// kept and applied as soon as it does); true does not mean the device has a vertical bar.
   static Future<bool> setPreferredVerticalBarBehavior(VerticalBarBehavior behavior) async {
     if (!_isIOS) return false;
     try {
@@ -65,6 +67,7 @@ class DualScreenInfo {
     T? latest;
     StreamSubscription<T>? source;
     final Set<MultiStreamController<T>> listeners = <MultiStreamController<T>>{};
+    // The platform ended the stream (no hinge): its subscription is done, so it is dropped, not cancelled.
     void closeAll() {
       source = null;
       for (final MultiStreamController<T> listener in <MultiStreamController<T>>[...listeners]) {
@@ -85,8 +88,6 @@ class DualScreenInfo {
           }
         },
         onError: (Object error, StackTrace stack) {
-          // No native side (an unsupported platform or a test without a mock): end quietly, like a device without a hinge.
-          if (error is MissingPluginException) return closeAll();
           for (final MultiStreamController<T> listener in <MultiStreamController<T>>[...listeners]) {
             listener.addErrorSync(error, stack);
           }

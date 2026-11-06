@@ -77,4 +77,17 @@ class RunnerTests: XCTestCase {
     XCTAssertEqual((HostController().value(forKey: "preferredVerticalBarBehavior") as? NSNumber)?.intValue, 0, "other instances keep automatic")
     XCTAssertFalse(DuoRuntime.installVerticalBarBehaviorOverride(on: UIViewController()), "UIViewController implements it itself, so it is left alone")
   }
+
+  /// A guarded read returns nil for a key the object does not have, where `value(forKey:)` would raise.
+  private final class Region: NSObject {
+    @objc var frame = CGRect(x: 1, y: 2, width: 3, height: 4)
+    @objc(isActive) var active = true
+  }
+
+  func testGuardedReadsReturnNilForMissingKeysAndFindFlagGetters() {
+    let region = Region()
+    XCTAssertEqual((DuoRuntime.read("frame", of: region) as? NSValue)?.cgRectValue, CGRect(x: 1, y: 2, width: 3, height: 4))
+    XCTAssertEqual((DuoRuntime.read("active", of: region) as? NSNumber)?.boolValue, true)
+    XCTAssertNil(DuoRuntime.read("renamedInALaterRelease", of: region))
+  }
 }
