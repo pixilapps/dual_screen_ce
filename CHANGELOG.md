@@ -11,7 +11,6 @@
 * iOS: key-value reads of iPhone Duo objects check the getter first, so a key renamed by a later iOS cannot raise an
   uncatchable exception.
 * Docs: `setPreferredVerticalBarBehavior`'s return value, and what the plugin does on a device without a hinge.
-* Example: the iOS project builds with CocoaPods again (two stray file references removed).
 
 ## 1.1.0
 
