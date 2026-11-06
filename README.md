@@ -12,7 +12,7 @@ Foldable and dual-screen support for Flutter on **Android foldables** and **iPho
 
 ```yaml
 dependencies:
-  dual_screen_ce: ^1.1.0
+  dual_screen_ce: ^1.1.1
 ```
 
 ```dart
