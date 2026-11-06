@@ -1,4 +1,6 @@
 export 'src/two_pane.dart';
+export 'src/dual_screen.dart';
+export 'src/dual_screen_data.dart';
 export 'src/dual_screen_info.dart';
 export 'src/media_query_extension.dart';
 export 'src/dual_screen_scope.dart';

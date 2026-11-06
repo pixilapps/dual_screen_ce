@@ -44,6 +44,36 @@ void main() {
     expect(tester.getRect(find.byKey(const Key('end'))), rectMoreOrLessEquals(const Rect.fromLTWH(0, 475.5, 669, 475.5)));
   });
 
+  testWidgets('half-open Duo: each pane gets half the fold as padding on its fold side', (WidgetTester tester) async {
+    final List<EdgeInsets> paddings = <EdgeInsets>[];
+    tester.view.physicalSize = _inner;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Widget pane() => Builder(
+      builder: (BuildContext context) {
+        paddings.add(MediaQuery.paddingOf(context));
+        return const SizedBox.expand();
+      },
+    );
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: _inner,
+          padding: EdgeInsets.only(right: 84, bottom: 34),
+          displayFeatures: <DisplayFeature>[
+            DisplayFeature(bounds: Rect.fromLTWH(455.5, 0, 40, 669), type: DisplayFeatureType.fold, state: DisplayFeatureState.postureHalfOpened),
+          ],
+        ),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: TwoPane(startPane: pane(), endPane: pane()),
+        ),
+      ),
+    );
+    // The leading pane gains 20 on its right, the trailing pane 20 on its left and keeps the 84pt bar column.
+    expect(paddings, <EdgeInsets>[const EdgeInsets.only(right: 20, bottom: 34), const EdgeInsets.only(left: 20, right: 84, bottom: 34)]);
+  });
+
   testWidgets('a hinge keeps its gap: panes sit either side of it (Surface Duo)', (WidgetTester tester) async {
     await _pump(tester, _inner, const <DisplayFeature>[
       DisplayFeature(bounds: Rect.fromLTWH(455.5, 0, 40, 669), type: DisplayFeatureType.hinge, state: DisplayFeatureState.postureFlat),
