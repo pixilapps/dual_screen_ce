@@ -1,6 +1,6 @@
 name: dual_screen_ce
 description: Community Edition of Microsoft's archived dual_screen package. TwoPane layout and hinge angle for Android foldables and iPhone Duo.
-version: 1.0.0
+version: 1.1.1
 homepage: https://github.com/pixilapps/dual_screen_ce
 repository: https://github.com/pixilapps/dual_screen_ce
 issue_tracker: https://github.com/pixilapps/dual_screen_ce/issues
@@ -18,7 +18,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  foldable: ^1.0.5
 
 dev_dependencies:
   flutter_test:
@@ -31,3 +30,5 @@ flutter:
       android:
         package: com.pixilapps.dual_screen_ce
         pluginClass: DualScreenInfo
+      ios:
+        pluginClass: DualScreenCePlugin

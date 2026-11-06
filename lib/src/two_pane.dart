@@ -287,6 +287,9 @@ class TwoPane extends StatelessWidget {
     late final Widget resolvedEndPane;
     late final Widget resolvedDelimiter;
     late final TwoPanePriority resolvedPanePriority;
+    // Half the width of a fold that has one (the iPhone Duo's 40pt crease and its margins): padding each pane gets on its
+    // fold side, so SafeArea-respecting content stays off the curve while the backgrounds still meet.
+    double foldHalf = 0;
     const int fractionBase = 1000000000000;
 
     if (mediaQuery == null) {
@@ -314,6 +317,7 @@ class TwoPane extends StatelessWidget {
         // Android folds. The iPhone Duo reports its fold as a 40pt strip.
         if (displayFeature.type == .fold) {
           final bool horizontal = resolvedDirection == Axis.horizontal;
+          foldHalf = (horizontal ? displayFeatureBounds.width : displayFeatureBounds.height) / 2;
           displayFeatureBounds = Rect.fromCenter(
             center: displayFeatureBounds.center,
             width: horizontal ? 0 : displayFeatureBounds.width,
@@ -340,11 +344,13 @@ class TwoPane extends StatelessWidget {
         case Axis.horizontal:
           {
             late final Rect seam;
-            if (displayFeatureBounds == null || !allowProportionOverride) {
+            final bool atFold = displayFeatureBounds != null && allowProportionOverride;
+            if (!atFold) {
               seam = Rect.fromLTWH(paneProportion * size.width, 0, 0, size.height);
             } else {
               seam = displayFeatureBounds;
             }
+            final double inset = atFold ? foldHalf : 0;
             resolvedDelimiter = SizedBox(width: seam.size.width);
             final int leftFlex = (seam.left * fractionBase).toInt();
             final int rightFlex = ((size.width - seam.right) * fractionBase).toInt();
@@ -355,16 +361,28 @@ class TwoPane extends StatelessWidget {
                 {
                   startPaneFlex = leftFlex;
                   endPaneFlex = rightFlex;
-                  resolvedStartPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, leftScreen, screenOffset), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, rightScreen, screenOffset), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, leftScreen, screenOffset, .only(right: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, rightScreen, screenOffset, .only(left: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
               case .rtl:
                 {
                   startPaneFlex = rightFlex;
                   endPaneFlex = leftFlex;
-                  resolvedStartPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, rightScreen, screenOffset), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, leftScreen, screenOffset), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, rightScreen, screenOffset, .only(left: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, leftScreen, screenOffset, .only(right: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
             }
@@ -373,11 +391,13 @@ class TwoPane extends StatelessWidget {
         case .vertical:
           {
             late final Rect seam;
-            if (displayFeatureBounds == null || !allowProportionOverride) {
+            final bool atFold = displayFeatureBounds != null && allowProportionOverride;
+            if (!atFold) {
               seam = .fromLTWH(0, paneProportion * size.height, size.width, 0);
             } else {
               seam = displayFeatureBounds;
             }
+            final double inset = atFold ? foldHalf : 0;
             resolvedDelimiter = SizedBox(height: seam.size.height);
             final int topPane = (seam.top * fractionBase).toInt();
             final int bottomPane = ((size.height - seam.bottom) * fractionBase).toInt();
@@ -388,16 +408,28 @@ class TwoPane extends StatelessWidget {
                 {
                   startPaneFlex = topPane;
                   endPaneFlex = bottomPane;
-                  resolvedStartPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, topScreen, screenOffset), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, bottomScreen, screenOffset), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, topScreen, screenOffset, .only(bottom: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, bottomScreen, screenOffset, .only(top: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
               case .up:
                 {
                   startPaneFlex = bottomPane;
                   endPaneFlex = topPane;
-                  resolvedStartPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, bottomScreen, screenOffset), child: startPane!);
-                  resolvedEndPane = MediaQuery(data: _removeMediaQueryPadding(mediaQuery, topScreen, screenOffset), child: endPane!);
+                  resolvedStartPane = MediaQuery(
+                    data: _paneData(mediaQuery, bottomScreen, screenOffset, .only(top: inset)),
+                    child: startPane!,
+                  );
+                  resolvedEndPane = MediaQuery(
+                    data: _paneData(mediaQuery, topScreen, screenOffset, .only(bottom: inset)),
+                    child: endPane!,
+                  );
                 }
                 break;
             }
@@ -536,6 +568,13 @@ class TwoPane extends StatelessWidget {
     final bool wideEnough = bounds.left <= position.left && bounds.right >= position.right;
     final bool splitsVertically = bounds.top > position.top && bounds.bottom < position.bottom;
     return wideEnough && splitsVertically;
+  }
+
+  /// [_removeMediaQueryPadding] for a pane, plus [foldPadding] on its fold side.
+  static MediaQueryData _paneData(MediaQueryData data, Rect subScreen, Offset origin, EdgeInsets foldPadding) {
+    final MediaQueryData pane = _removeMediaQueryPadding(data, subScreen, origin);
+    if (foldPadding == EdgeInsets.zero) return pane;
+    return pane.copyWith(padding: pane.padding + foldPadding, viewPadding: pane.viewPadding + foldPadding);
   }
 
   /// Removes MediaQuery padding, insets, and display features that fall
