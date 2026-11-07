@@ -1,3 +1,8 @@
+## 1.1.2
+
+* Screenshots on pub.dev: the example on iPhone Duo and on a Pixel Fold.
+* Example: no debug banner. README: the install line names 1.1.2.
+
 ## 1.1.1
 
 * iOS: `hingeAngleEvents` ends at once on a device without a hinge (below iOS 27.1, or once no hinge is found), as on

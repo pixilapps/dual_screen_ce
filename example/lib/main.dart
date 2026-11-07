@@ -1,7 +1,11 @@
 import 'package:dual_screen_ce/dual_screen_ce.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(const DualScreenScope(child: MaterialApp(home: _Home())));
+void main() => runApp(
+  const DualScreenScope(
+    child: MaterialApp(debugShowCheckedModeBanner: false, home: _Home()),
+  ),
+);
 
 class _Home extends StatelessWidget {
   const _Home();
