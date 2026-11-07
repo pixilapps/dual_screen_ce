@@ -1,6 +1,6 @@
 name: dual_screen_ce
 description: Community Edition of Microsoft's archived dual_screen package. TwoPane layout and hinge angle for Android foldables and iPhone Duo.
-version: 1.1.1
+version: 1.1.2
 homepage: https://github.com/pixilapps/dual_screen_ce
 repository: https://github.com/pixilapps/dual_screen_ce
 issue_tracker: https://github.com/pixilapps/dual_screen_ce/issues
@@ -10,6 +10,17 @@ topics:
   - iphone-duo
   - responsive
   - layout
+screenshots:
+  - description: 'iPhone Duo folded like a book: TwoPane splits at the fold, and the example draws its own bar where the system puts its vertical bar.'
+    path: doc/screenshots/iphone_duo_book.png
+  - description: 'iPhone Duo open in landscape: posture, size classes, vertical bar and display regions, live from DualScreen.'
+    path: doc/screenshots/iphone_duo_open.png
+  - description: 'iPhone Duo closed: the compact outer display shows one pane, with a custom bar where the system draws its vertical bar.'
+    path: doc/screenshots/iphone_duo_closed.png
+  - description: 'Pixel Fold half open: TwoPane puts one pane on each side of the fold; the hinge angle comes from DualScreenInfo.'
+    path: doc/screenshots/pixel_fold_half_open.png
+  - description: 'Pixel Fold closed: the cover screen shows one pane.'
+    path: doc/screenshots/pixel_fold_closed.png
 
 environment:
   sdk: ^3.12.0
